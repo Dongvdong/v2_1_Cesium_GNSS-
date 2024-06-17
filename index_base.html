@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="Cesium-1.118/Build/Cesium/Cesium.js"></script>
+  <link href="Cesium-1.118/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  
+  <style>
+  body {
+    overflow: hidden;
+    margin: 0px;
+    padding: 0px;
+    height: 100%;
+  }
+  #cesiumContainer {
+    height: 100%;
+  }
+</style>
+
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <script type="module">
+    //<link href="style.css" rel="stylesheet">
+    // Get your token from https://cesium.com/ion/tokens  秘钥
+   Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyZmVmYjIwZC01MWMwLTQ1ODMtOTgyYi01NWRlYjI5MDQzZTQiLCJpZCI6MzY5MTAsImlhdCI6MTcxODQ0MzQyM30.W67FXIW320E6hr9RLPj-I107TqSjrzEZoIB6cDXO50A';
+ 
+ 
+   //1创建一个点并飞行过去
+   const viewer = new Cesium.Viewer('cesiumContainer', {
+      terrain: Cesium.Terrain.fromWorldTerrain(),
+    });
+
+    const osmBuildings = await Cesium.createOsmBuildingsAsync();
+    viewer.scene.primitives.add(osmBuildings);
+    
+    
+   //1飞到指定地点 经纬度高度
+    viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(-122.384, 37.62, 4000)
+      });
+ 
+ 
+ 
+    //2创建连续点对
+    const flightData = JSON.parse(
+      '[{"longitude":-122.39053,"latitude":37.61779,"height":-27.32},{"longitude":-122.39035,"latitude":37.61803,"height":-27.32},{"longitude":-122.39019,"latitude":37.61826,"height":-27.32},{"longitude":-122.39006,"latitude":37.6185,"height":-27.32},{"longitude":-122.38985,"latitude":37.61864,"height":-27.32}]');
+ 
+    // Create a point for each.
+    for (let i = 0; i < flightData.length; i++) {
+       
+     const dataPoint = flightData[i];
+ 
+     const airplaneEntity= viewer.entities.add({
+        //点击这个点出现的描述
+        description: `Location: (${dataPoint.longitude}, ${dataPoint.latitude}, ${dataPoint.height})`,
+        //点的位置
+        position: Cesium.Cartesian3.fromDegrees(dataPoint.longitude, dataPoint.latitude, dataPoint.height),
+        //点的类型
+        point: { pixelSize: 10, color: Cesium.Color.BLUE }
+      });
+ 
+    // viewer.flyTo(airplaneEntity);
+      
+     
+    }
+ 
+ 
+  </script>
+</body>
+</html>

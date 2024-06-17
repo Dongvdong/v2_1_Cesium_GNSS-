@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="Cesium-1.118/Build/Cesium/Cesium.js"></script>
+  <link href="Cesium-1.118/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <style>
+    body {
+      overflow: hidden;
+      margin: 0px;
+      padding: 0px;
+      height: 100%;
+    }
+    #cesiumContainer {
+      height: 100%;
+    }
+  </style>
+
+</head>
+
+
+
+<body>
+  <div id="cesiumContainer"></div>
+
+
+
+    <!-- 1选择文件 -->
+  <div class="nav" style=" position:absolute;left:0px;top:0px">
+        <input type="file" id="fileUpload" name="fileUpload"  onchange="SelectMapDir(true) ">
+  </div>
+
+   <!-- 2选择颜色 -->
+    <label for="colors">选择颜色:</label> 
+    <select id="colors_select" name="colors">   
+      <option value="rgba(255, 0, 0, 255)">红色</option>
+      <option value="rgba(0, 255, 0, 255)">绿色</option>
+      <option value="rgba(0, 0, 255, 255)">蓝色</option>
+      <option value="rgba(255, 255, 0, 255)">黄色</option>
+    </select>
+    
+
+
+
+  <script type="module">
+
+        
+        window.SelectMapDir = SelectMapDir;// 声明选择文件函数位置
+
+        var gps_txt_value=[];
+
+        /**************************************************
+        *name     :SelectMapDir(flag)
+        *function :加载文件夹按钮绑定函数
+        **************************************************/
+        function SelectMapDir(flag)
+        {
+           
+            if (flag) {
+                 
+                //文件夹路径
+                var selectDictory = document.getElementById('fileUpload');  //input 类型文件 SelectDictMap
+                //文件夹列表
+                var selectDictory_files = selectDictory.files;
+
+                for (var file of selectDictory_files)
+                {
+ 
+                    console.log('文件名', file.name);    //文件名
+                    var reader = new FileReader();
+                    reader.readAsText(file);      
+                   
+                    reader.onload = function ()
+                    
+                    {              
+                        gps_txt_value = this.result;//获取结果哦
+                        //console.log("读取全部内容：",this.result);
+                        //var jsonData = JSON.parse(temp);// json解析
+                        var map_txt_value=Readtxt_map(gps_txt_value);//使用结果
+                      
+                        var selectBox_colors = document.getElementById("colors_select");
+                        var selected_color_i = selectBox_colors.options[selectBox_colors.selectedIndex].value;
+                        console.log("颜色",selected_color_i,selectBox_colors.selectedIndex);
+                        //alert(selectBox_colors);
+                        Draw_Point(viewer,map_txt_value,selected_color_i);
+
+                        Draw_Line(viewer,map_txt_value,selected_color_i);
+ 
+                    };// 传递外部参数进去
+                        
+                }
+            }
+        }
+ 
+        /**************************************************
+        *name     :Readtxt_map(txt, map_value)
+        *function :读取GPS.txt(时间戳 经度 纬度 高度)，用于绘制地图范围
+        *           3  -122.163428479  47.6249706197  243.199996948
+        *           4  -122.163428479  47.625278944  243.199996948
+        *param    :txt 存储所有真实GPS文件路径
+        *param    :map_value 真实GPS集合
+        *           [[3  -122.163428479  47.6249706197  243.199996948]
+        *            [4  -122.163428479  47.625278944   243.199996948]]
+ 
+        **************************************************/
+        function Readtxt_map(txt) {
+            
+            var map_value=[];
+              
+            var fenge='\n';
+         
+            var line_list = txt.split(fenge);
+            var j = 0;
+
+            while (j < line_list.length - 1) {
+
+                var data_list=line_list[j].split(' ');
+
+                var real_name = data_list[0];
+                var real_lon = data_list[2];
+                var real_lat = data_list[1];
+                var real_alt = data_list[3];
+
+                // // 坐标系偏移
+                // var wgs84coord =
+                //     coordtransform.wgs84togcj02(parseFloat(real_lon), parseFloat(real_lat));
+                // real_lon = wgs84coord[0];
+                // real_lat = wgs84coord[1];
+                  
+                var line_i_lon_lat_h=[real_name, parseFloat(real_lon), parseFloat(real_lat), parseFloat(real_alt),parseFloat(j),]
+                map_value.push(line_i_lon_lat_h);
+                console.log('j', line_i_lon_lat_h);
+                
+                j = j + 1;
+            }
+            //console.log('map_value', map_value);
+            return map_value;
+            }
+
+  
+  
+        /**************************************************
+        *name     :Draw_Point(viewer,flightData,colors_i_)
+        *function : 将数据点flightData根据colors_i_颜色以不同的形式可视化在地图viewer中
+        *param    ：flightData
+        *           [[3  47.6249706197 -122.163428479  243.199996948]
+        *             4  47.625278944 -122.163428479 243.199996948]]
+        *param    :types 轨迹类型 
+        *param    :viewer 地图控件
+ 
+ 
+        **************************************************/
+        function Draw_Point(viewer,flightData,colors_i_) {
+            //随机颜色
+          //  var colori = Cesium.Color.fromRandom({
+          //                       red: 1.0,
+          //                       alpha: 0.65
+          //                   });
+
+            var colori = Cesium.Color.fromCssColorString(colors_i_);
+            //可以根据types 指定颜色
+ 
+            for (let i = 0; i < flightData.length; i++) {
+         
+                const dataPoint = flightData[i];
+                var id=dataPoint[4];
+                var longitude=dataPoint[1];
+                var latitude=dataPoint[2];
+                var height=dataPoint[3];
+                var name=dataPoint[0];
+ 
+
+                var airplaneEntity= viewer.entities.add({
+                //点击这个点出现的描述
+                description: `帧号: ${id}  <br> 名字: ${name}   <br> 位置: (${longitude}, ${latitude}, ${height}) `,
+                //点的位置
+                position: Cesium.Cartesian3.fromDegrees(longitude, latitude, height),
+                //点的类型
+                //point: { pixelSize: 10, color: Cesium.Color.BLUE }
+                point: { pixelSize: 6, color: colori }
+            });
+         
+             viewer.flyTo(airplaneEntity);
+ 
+            }
+             
+        }
+     
+     
+  
+        /**************************************************
+        *name     :Draw_Line(viewer,flightData,colors_i_)
+        *function : 将数据线flightData根据colors_i_颜色以不同的形式可视化在地图viewer中
+        *param    ：flightData
+        *           [[3  47.6249706197 -122.163428479  243.199996948]
+        *             4  47.625278944 -122.163428479 243.199996948]]
+        *param    :types 轨迹类型 
+        *param    :viewer 地图控件
+ 
+ 
+        **************************************************/
+        function Draw_Line(viewer,flightData,colors_i_) {
+            //随机颜色
+          //  var colori = Cesium.Color.fromRandom({
+          //                       red: 1.0,
+          //                       alpha: 0.65
+          //                   });
+
+            
+            //可以根据types 指定颜色
+         
+            var positionData=[];
+            for (let i = 0; i < flightData.length; i++) {
+         
+                const dataPoint = flightData[i];
+                var id=dataPoint[4];
+                var longitude=dataPoint[1];
+                var latitude=dataPoint[2];
+                var height=dataPoint[3];
+                var name=dataPoint[0];
+                const position = Cesium.Cartesian3.fromDegrees(longitude, latitude, height);
+                positionData.push(position);
+            }
+            
+            // 贴地线
+            var line_groud = viewer.entities.add({
+                polyline: { 
+                    positions: positionData,
+                    clampToGround: false,// 贴地 
+                    width: 3,
+                    material: new Cesium.PolylineGlowMaterialProperty({ // 设置材质为发光线
+                        glowPower: 0.5,////一个数字属性，指定发光强度，占总线宽的百分比
+                        color: Cesium.Color.fromCssColorString(colors_i_) // 设置线的颜色为蓝色
+                    })
+
+                    
+                }
+            });
+
+             
+        }
+        
+
+    //<link href="style.css" rel="stylesheet">
+    // Get your token from https://cesium.com/ion/tokens  秘钥
+   Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyZmVmYjIwZC01MWMwLTQ1ODMtOTgyYi01NWRlYjI5MDQzZTQiLCJpZCI6MzY5MTAsImlhdCI6MTcxODQ0MzQyM30.W67FXIW320E6hr9RLPj-I107TqSjrzEZoIB6cDXO50A';
+ 
+ 
+   //1创建地球可视化
+   const viewer = new Cesium.Viewer('cesiumContainer', {
+      terrain: Cesium.Terrain.fromWorldTerrain(),
+    });
+
+    const osmBuildings = await Cesium.createOsmBuildingsAsync();
+    viewer.scene.primitives.add(osmBuildings);
+    
+    
+   //1飞到指定地点 经纬度高度
+    viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(108.76597241666667, 34.03509111111111, 514.656)
+      });
+
+ 
+
+      
+    
+ 
+ 
+  </script>
+</body>
+</html>
